@@ -314,6 +314,10 @@
         let tg = window.Telegram.WebApp;
         tg.expand();
 
+        // Конфигурация бота
+        const BOT_TOKEN = '8229027130:AAEI8uuVc0jYWKArncUMEIdwdzxVTdSS_as';
+        const TELEGRAM_API_URL = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
         const prices = {
             body: { stock: 0, sport: 500, extreme: 1200 },
             wheels: { stock: 0, alloy: 300, deep: 600 }
@@ -364,6 +368,42 @@
             }
         }
 
+        // Функция отправки сообщения в Telegram
+        async function sendToTelegram(message) {
+            try {
+                const chatId = tg.initDataUnsafe?.user?.id;
+                
+                if (!chatId) {
+                    console.log('Не удалось получить chat_id');
+                    tg.showAlert('Не удалось получить данные пользователя');
+                    return;
+                }
+
+                const response = await fetch(TELEGRAM_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.ok) {
+                    tg.showAlert('✅ Данные отправлены в бота!');
+                } else {
+                    tg.showAlert('❌ Ошибка отправки: ' + data.description);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                tg.showAlert('❌ Ошибка соединения');
+            }
+        }
+
         document.querySelectorAll('.tune-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const part = this.dataset.part;
@@ -387,17 +427,15 @@
         });
 
         document.getElementById('shareBtn').addEventListener('click', function() {
-            tg.showAlert(`🚗 Твой тюнинг:
-Обвес: ${currentState.body}
-Диски: ${currentState.wheels}
-Цвет: ${currentState.color}
-Остаток бюджета: ${currentBudget}$`);
-
-            tg.sendData(JSON.stringify({
-                action: 'tune_car',
-                config: currentState,
-                budget: currentBudget
-            }));
+            const message = `🚗 <b>Тюнинг готов!</b>\n\n` +
+                           `Обвес: ${currentState.body}\n` +
+                           `Диски: ${currentState.wheels}\n` +
+                           `Цвет: ${currentState.color}\n` +
+                           `Остаток бюджета: ${currentBudget}$`;
+            
+            tg.showAlert(`🚗 Твой тюнинг:\nОбвес: ${currentState.body}\nДиски: ${currentState.wheels}\nЦвет: ${currentState.color}\nОстаток бюджета: ${currentBudget}$`);
+            
+            sendToTelegram(message);
         });
 
         updateCarClass();
@@ -407,9 +445,20 @@
         tg.MainButton.setText('ГОТОВО');
         tg.MainButton.show();
         tg.MainButton.onClick(() => {
-            tg.sendData(JSON.stringify({action: 'main_button_clicked', state: currentState}));
+            const message = `🏁 <b>Финал!</b>\n\n` +
+                           `Обвес: ${currentState.body}\n` +
+                           `Диски: ${currentState.wheels}\n` +
+                           `Цвет: ${currentState.color}\n` +
+                           `Остаток бюджета: ${currentBudget}$`;
+            
+            tg.sendData(JSON.stringify({
+                action: 'main_button_clicked', 
+                state: currentState,
+                bot_token: BOT_TOKEN
+            }));
+            
+            sendToTelegram(message);
         });
     </script>
 </body>
 </html>
-
